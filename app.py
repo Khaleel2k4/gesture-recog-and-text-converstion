@@ -89,8 +89,14 @@ camera = None
 current_prediction = "Nothing"
 current_confidence = 0
 
+# Stability variables
+last_stable_prediction = "Nothing"
+prediction_count = 0
+confidence_threshold = 0.8  # 80% confidence threshold
+min_stable_frames = 3  # Need 3 consecutive high-confidence predictions
+
 def generate_frames():
-    global camera, current_prediction, current_confidence
+    global camera, current_prediction, current_confidence, last_stable_prediction, prediction_count
     
     if camera is None:
         # Initialize camera with multiple backend attempts
@@ -109,11 +115,16 @@ def generate_frames():
         if not success:
             break
         
+        # Flip frame horizontally for mirror effect
+        frame = cv2.flip(frame, 1)
+        
         # Process frame for sign language recognition
         try:
-            # Extract region of interest (ROI) like original code
-            cv2.rectangle(frame, (100, 100), (300, 300), (0, 0, 255), 5) 
-            roi = frame[100:300, 100:300]
+            # Extract optimized ROI for better gesture detection
+            roi_x1, roi_y1 = 120, 90
+            roi_x2, roi_y2 = 280, 250
+            cv2.rectangle(frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (0, 255, 0), 3) 
+            roi = frame[roi_y1:roi_y2, roi_x1:roi_x2]
             img = cv2.resize(roi, (50, 50))
             
             # Preprocess exactly like original working code
@@ -124,9 +135,23 @@ def generate_frames():
             predicted_class = np.argmax(predictions[0])
             confidence = np.max(predictions[0]) * 100
             
-            # Update global variables
-            current_prediction = labels[predicted_class]
-            current_confidence = confidence
+            # Stability logic to prevent random predictions
+            predicted_label = labels[predicted_class]
+            
+            if confidence >= confidence_threshold * 100:
+                if predicted_label == last_stable_prediction:
+                    prediction_count += 1
+                else:
+                    last_stable_prediction = predicted_label
+                    prediction_count = 1
+                
+                # Only update if we have enough consecutive predictions
+                if prediction_count >= min_stable_frames:
+                    current_prediction = predicted_label
+                    current_confidence = confidence
+            else:
+                # Reset count if confidence is too low
+                prediction_count = 0
             
             # Add text overlay to frame
             cv2.putText(frame, f"{current_prediction}: {confidence:.1f}%", 
