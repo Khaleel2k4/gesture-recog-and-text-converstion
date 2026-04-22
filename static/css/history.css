@@ -1,0 +1,157 @@
+.history-main {
+  padding: 24px;
+}
+
+.history-header {
+  margin-bottom: 24px;
+}
+
+.history-header h2 {
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.date-input,
+.select-input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.date-input:focus,
+.select-input:focus {
+  border-color: var(--btn1);
+  box-shadow: 0 0 0 3px rgba(107, 103, 255, 0.15);
+}
+
+.btn-apply {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--btn1), var(--btn2));
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-apply:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(107, 103, 255, 0.3);
+}
+
+.table-container {
+  background: linear-gradient(160deg, var(--card2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.history-table th {
+  text-align: left;
+  padding: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-detail {
+  padding: 6px 12px;
+  background: rgba(107, 103, 255, 0.15);
+  color: var(--btn1);
+  border: 1px solid rgba(107, 103, 255, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-detail:hover {
+  background: rgba(107, 103, 255, 0.25);
+  color: #fff;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-page {
+  padding: 8px 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--btn1);
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+  .date-input,
+  .select-input,
+  .btn-apply {
+    width: 100%;
+  }
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .pagination-controls {
+    justify-content: center;
+  }
+}
