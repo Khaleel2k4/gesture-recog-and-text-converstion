@@ -78,19 +78,19 @@
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Total Detections</div>
-            <div class="metric-value">1,234</div>
+            <div class="metric-value">{{ total_detections }}</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Accuracy Rate</div>
-            <div class="metric-value">95.2%</div>
+            <div class="metric-value">{{ accuracy_rate }}%</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Avg. Confidence</div>
-            <div class="metric-value">87.6%</div>
+            <div class="metric-value">{{ avg_confidence }}%</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Active Sessions</div>
-            <div class="metric-value">12</div>
+            <div class="metric-label">Unique Gestures</div>
+            <div class="metric-value">{{ gesture_stats|length }}</div>
           </div>
         </div>
 
@@ -104,8 +104,80 @@
             <canvas id="gestureChart"></canvas>
           </div>
         </div>
+
+        <div class="stats-grid">
+          <div class="stats-card">
+            <div class="stats-header">Gesture Statistics</div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Gesture</th>
+                  <th>Count</th>
+                  <th>Last Recognized</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if gesture_stats %}
+                  {% for stat in gesture_stats %}
+                  <tr>
+                    <td>{{ stat.gesture }}</td>
+                    <td>{{ stat.count }}</td>
+                    <td>{{ stat.last_recognized.strftime('%Y-%m-%d %H:%M:%S') if stat.last_recognized else 'N/A' }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3">No gesture data available</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="history-grid">
+          <div class="history-card">
+            <div class="history-header">Recent Gesture History</div>
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Gesture</th>
+                  <th>Confidence</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if gesture_history %}
+                  {% for gesture in gesture_history[:20] %}
+                  <tr>
+                    <td>{{ gesture.gesture }}</td>
+                    <td>{{ gesture.confidence|round(1) }}%</td>
+                    <td>{{ gesture.timestamp.strftime('%Y-%m-%d %H:%M:%S') if gesture.timestamp else 'N/A' }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3">No gesture history available</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </main>
     </div>
+    <script type="application/json" id="gestureData">
+      {
+        "gestureStats": {{ gesture_stats|tojson }},
+        "gestureHistory": {{ gesture_history|tojson }}
+      }
+    </script>
+    <script>
+      // Read data from JSON script tag
+      const gestureData = JSON.parse(document.getElementById('gestureData').textContent);
+      const gestureStats = gestureData.gestureStats;
+      const gestureHistory = gestureData.gestureHistory;
+    </script>
     <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
   </body>
 </html>

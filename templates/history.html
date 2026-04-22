@@ -100,16 +100,29 @@
               </tr>
             </thead>
             <tbody id="history-tbody">
-              <!-- Rows will be populated by JS -->
+              {% if gesture_history %}
+                {% for gesture in gesture_history %}
+                <tr>
+                  <td>{{ gesture.timestamp.strftime('%Y-%m-%d') if gesture.timestamp else 'N/A' }}</td>
+                  <td>{{ gesture.timestamp.strftime('%H:%M:%S') if gesture.timestamp else 'N/A' }}</td>
+                  <td><span class="gesture-badge">{{ gesture.gesture }}</span></td>
+                  <td>Confidence: {{ gesture.confidence|round(1) }}%</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--muted);">No gesture history available</td>
+                </tr>
+              {% endif %}
             </tbody>
           </table>
         </div>
 
         <div class="pagination">
-          <span id="pagination-info">1 - 12 of 42</span>
+          <span id="pagination-info">1 - {{ gesture_history|length }} of {{ gesture_history|length }}</span>
           <div class="pagination-controls">
-            <button id="prev-page" class="btn-page">Previous</button>
-            <button id="next-page" class="btn-page">Next</button>
+            <button id="prev-page" class="btn-page" disabled>Previous</button>
+            <button id="next-page" class="btn-page" disabled>Next</button>
           </div>
         </div>
       </main>

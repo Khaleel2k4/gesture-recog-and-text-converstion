@@ -87,6 +87,17 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.gesture-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(90deg, var(--btn1), var(--btn2));
+  color: white;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .btn-detail {
   padding: 6px 12px;
   background: rgba(107, 103, 255, 0.15);

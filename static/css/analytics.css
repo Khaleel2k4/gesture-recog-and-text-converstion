@@ -76,6 +76,59 @@
   max-height: 260px;
 }
 
+.stats-grid, .history-grid {
+  margin-top: 32px;
+}
+
+.stats-card, .history-card {
+  background: linear-gradient(160deg, var(--card2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.stats-header, .history-header {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.stats-table, .history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stats-table th, .history-table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-table td, .history-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-table tr:last-child td,
+.history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tr:hover,
+.history-table tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 @media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);

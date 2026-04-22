@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 import pyttsx3
 import os
+from db_config import db_config
+from mysql.connector import Error
 
 app = Flask(__name__)
 app.secret_key = 'signspeak_ai_secret_key_2024'
@@ -16,6 +18,80 @@ labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 
 users = {
     'nagamjyothi691@gmail.com': 'sign@2026'
 }
+
+# Database helper functions
+def get_user_id(email):
+    """Get user ID from database by email"""
+    try:
+        connection = db_config.get_connection()
+        if not connection:
+            return None
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+        result = cursor.fetchone()
+        cursor.close()
+        connection.close()
+        return result[0] if result else None
+    except Error as e:
+        print(f"Error getting user ID: {e}")
+        return None
+
+def save_gesture(user_id, gesture_label, confidence):
+    """Save recognized gesture to database"""
+    try:
+        connection = db_config.get_connection()
+        if not connection:
+            return False
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO gestures (user_id, gesture_label, confidence) VALUES (%s, %s, %s)",
+            (user_id, gesture_label, confidence)
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return True
+    except Error as e:
+        print(f"Error saving gesture: {e}")
+        return False
+
+def get_gesture_history(user_id, limit=50):
+    """Get gesture history for a user"""
+    try:
+        connection = db_config.get_connection()
+        if not connection:
+            return []
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT gesture_label, confidence, timestamp FROM gestures WHERE user_id = %s ORDER BY timestamp DESC LIMIT %s",
+            (user_id, limit)
+        )
+        results = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return [{'gesture': row[0], 'confidence': row[1], 'timestamp': row[2]} for row in results]
+    except Error as e:
+        print(f"Error getting gesture history: {e}")
+        return []
+
+def get_gesture_statistics(user_id):
+    """Get gesture recognition statistics for a user"""
+    try:
+        connection = db_config.get_connection()
+        if not connection:
+            return []
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT gesture_label, recognition_count, last_recognized FROM gesture_statistics WHERE user_id = %s ORDER BY recognition_count DESC",
+            (user_id,)
+        )
+        results = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return [{'gesture': row[0], 'count': row[1], 'last_recognized': row[2]} for row in results]
+    except Error as e:
+        print(f"Error getting gesture statistics: {e}")
+        return []
 
 @app.route('/')
 def index():
@@ -43,7 +119,36 @@ def login():
 def dashboard():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html')
+    
+    user_id = get_user_id(session['username'])
+    if not user_id:
+        return redirect(url_for('login'))
+    
+    # Fetch gesture history and statistics
+    gesture_history = get_gesture_history(user_id, limit=20)
+    gesture_stats = get_gesture_statistics(user_id)
+    
+    # Calculate metrics
+    total_detections = len(gesture_history)
+    if total_detections > 0:
+        avg_confidence = sum(g['confidence'] for g in gesture_history) / total_detections
+        accuracy_rate = sum(1 for g in gesture_history if g['confidence'] >= 80) / total_detections * 100
+        
+        # Get last detected gesture time
+        last_gesture = gesture_history[0]
+        last_detected = last_gesture['timestamp']
+    else:
+        avg_confidence = 0
+        accuracy_rate = 0
+        last_detected = None
+    
+    return render_template('dashboard.html', 
+                         gesture_history=gesture_history,
+                         gesture_stats=gesture_stats,
+                         total_detections=total_detections,
+                         avg_confidence=round(avg_confidence, 1),
+                         accuracy_rate=round(accuracy_rate, 1),
+                         last_detected=last_detected)
 
 @app.route('/logout')
 def logout():
@@ -70,13 +175,44 @@ def realtime():
 def history():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('history.html')
+    
+    user_id = get_user_id(session['username'])
+    if not user_id:
+        return redirect(url_for('login'))
+    
+    # Fetch gesture history from database
+    gesture_history = get_gesture_history(user_id, limit=1000)
+    
+    return render_template('history.html', gesture_history=gesture_history)
 
 @app.route('/analytics')
 def analytics():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('analytics.html')
+    
+    user_id = get_user_id(session['username'])
+    if not user_id:
+        return redirect(url_for('login'))
+    
+    # Fetch gesture history and statistics
+    gesture_history = get_gesture_history(user_id, limit=100)
+    gesture_stats = get_gesture_statistics(user_id)
+    
+    # Calculate metrics
+    total_detections = len(gesture_history)
+    if total_detections > 0:
+        avg_confidence = sum(g['confidence'] for g in gesture_history) / total_detections
+        accuracy_rate = sum(1 for g in gesture_history if g['confidence'] >= 80) / total_detections * 100
+    else:
+        avg_confidence = 0
+        accuracy_rate = 0
+    
+    return render_template('analytics.html', 
+                         gesture_history=gesture_history,
+                         gesture_stats=gesture_stats,
+                         total_detections=total_detections,
+                         avg_confidence=round(avg_confidence, 1),
+                         accuracy_rate=round(accuracy_rate, 1))
 
 @app.route('/settings')
 def settings():
@@ -88,15 +224,19 @@ def settings():
 camera = None
 current_prediction = "Nothing"
 current_confidence = 0
+last_saved_gesture = None
+last_saved_time = 0
+current_user_id = None
 
 # Stability variables
 last_stable_prediction = "Nothing"
 prediction_count = 0
-confidence_threshold = 0.8  # 80% confidence threshold
-min_stable_frames = 3  # Need 3 consecutive high-confidence predictions
+confidence_threshold = 0.5  # 50% confidence threshold (lowered for better recognition)
+min_stable_frames = 2  # Need 2 consecutive high-confidence predictions (lowered for faster response)
 
 def generate_frames():
-    global camera, current_prediction, current_confidence, last_stable_prediction, prediction_count
+    global camera, current_prediction, current_confidence, last_stable_prediction, prediction_count, last_saved_gesture, last_saved_time, current_user_id
+    import time
     
     if camera is None:
         # Initialize camera with multiple backend attempts
@@ -149,6 +289,16 @@ def generate_frames():
                 if prediction_count >= min_stable_frames:
                     current_prediction = predicted_label
                     current_confidence = confidence
+                    
+                    # Save gesture to database (avoid duplicates within 2 seconds)
+                    current_time = time.time()
+                    if (current_prediction != "Nothing" and 
+                        (last_saved_gesture != current_prediction or 
+                         current_time - last_saved_time > 2)):
+                        if current_user_id:
+                            save_gesture(current_user_id, current_prediction, current_confidence)
+                            last_saved_gesture = current_prediction
+                            last_saved_time = current_time
             else:
                 # Reset count if confidence is too low
                 prediction_count = 0
@@ -171,8 +321,13 @@ def generate_frames():
 
 @app.route('/video')
 def video():
+    global current_user_id
     if 'username' not in session:
         return redirect(url_for('login'))
+    
+    # Set current user ID for use in generate_frames
+    current_user_id = get_user_id(session['username'])
+    
     return Response(generate_frames(), 
                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -184,6 +339,31 @@ def recognition_results():
         'gesture': current_prediction,
         'confidence': round(current_confidence, 1)
     })
+
+@app.route('/api/gesture_history')
+def api_gesture_history():
+    if 'username' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    
+    user_id = get_user_id(session['username'])
+    if not user_id:
+        return jsonify({'error': 'User not found'}), 404
+    
+    limit = request.args.get('limit', 50, type=int)
+    history = get_gesture_history(user_id, limit)
+    return jsonify(history)
+
+@app.route('/api/gesture_statistics')
+def api_gesture_statistics():
+    if 'username' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    
+    user_id = get_user_id(session['username'])
+    if not user_id:
+        return jsonify({'error': 'User not found'}), 404
+    
+    stats = get_gesture_statistics(user_id)
+    return jsonify(stats)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
